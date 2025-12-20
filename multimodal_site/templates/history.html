@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}History{% endblock %}
+
+{% block content %}
+<div class="card shadow p-4">
+    <h3>🕒 Prediction History</h3>
+    <hr>
+
+    <table class="table table-bordered table-striped mt-3">
+        <tr>
+            <th>Text</th>
+            <th>Image</th>
+            <th>Result</th>
+            <th>Date</th>
+        </tr>
+
+        {% for r in records %}
+        <tr>
+            <td>{{ r.text|truncatechars:40 }}</td>
+            <td>{{ r.image }}</td>
+            <td>{{ r.result }}</td>
+            <td>{{ r.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

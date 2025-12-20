@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Prediction{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+
+        <div class="card shadow p-4">
+            <h3 class="mb-3">🔍 Fake News Prediction</h3>
+
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">News Text</label>
+                    <textarea name="news_text" class="form-control" rows="4" required></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Upload Image</label>
+                    <input type="file" name="news_image" class="form-control" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Predict
+                </button>
+            </form>
+
+            {% if result %}
+            <hr>
+            <h4>Prediction Result:</h4>
+            <div class="alert alert-info mt-2">
+                {{ result }}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Training{% endblock %}
+
+{% block content %}
+<div class="card shadow p-4">
+    <h3>📘 Model Training Overview</h3>
+    <hr>
+
+    <p>
+        This system uses a <strong>Multimodal Deep Learning approach</strong> to detect fake news.
+    </p>
+
+    <ul>
+        <li><strong>Text Analysis:</strong> BERT model extracts semantic meaning.</li>
+        <li><strong>Image Analysis:</strong> CNN (ResNet) extracts visual features.</li>
+        <li><strong>Fusion:</strong> Image–Text similarity using cosine similarity.</li>
+    </ul>
+
+    <p class="text-muted">
+        The model predicts whether the uploaded image matches the news text context.
+    </p>
+</div>
+{% endblock %}
