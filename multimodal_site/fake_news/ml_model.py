@@ -1,28 +1,40 @@
 import torch
-import clip
+from transformers import BertTokenizer, BertModel
+from torchvision import models, transforms
 from PIL import Image
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Load CLIP model
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, preprocess = clip.load("ViT-B/32", device=device)
+# Load BERT
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+bert = BertModel.from_pretrained("bert-base-uncased")
+bert.eval()
+
+# Load CNN
+cnn = models.resnet18(pretrained=True)
+cnn.eval()
+
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor()
+])
 
 def predict_fake_news(text, image_path):
-    # Prepare inputs
-    image = preprocess(Image.open(image_path).convert("RGB")).unsqueeze(0).to(device)
-    text_input = clip.tokenize([text]).to(device)
+    # ---- TEXT EMBEDDING ----
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
+    with torch.no_grad():
+        text_emb = bert(**inputs).last_hidden_state.mean(dim=1)
+
+    # ---- IMAGE EMBEDDING ----
+    image = Image.open(image_path).convert("RGB")
+    image = transform(image).unsqueeze(0)
 
     with torch.no_grad():
-        image_features = model.encode_image(image)
-        text_features = model.encode_text(text_input)
+        img_emb = cnn(image)
 
-        # Normalize
-        image_features /= image_features.norm(dim=-1, keepdim=True)
-        text_features /= text_features.norm(dim=-1, keepdim=True)
+    # Match dimensions
+    img_emb = img_emb[:, :768]
 
-        similarity = (image_features @ text_features.T).item()
+    # ---- SIMILARITY ----
+    score = cosine_similarity(text_emb.numpy(), img_emb.numpy())[0][0]
 
-    # 🔥 EXACT LOGIC
-    if similarity > 0.25:
-        return "REAL NEWS ✅ (Image matches text)"
-    else:
-        return "FAKE NEWS ❌ (Image does not match text)"
+    return "REAL NEWS" if score >= 0.25 else "FAKE NEWS"

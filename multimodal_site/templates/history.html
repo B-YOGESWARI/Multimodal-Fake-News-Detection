@@ -1,28 +1,376 @@
 {% extends 'base.html' %}
 
-{% block title %}History{% endblock %}
+{% block title %}History - Multimodal Fake News Detection{% endblock %}
 
 {% block content %}
-<div class="card shadow p-4">
-    <h3>🕒 Prediction History</h3>
-    <hr>
+<style>
+    :root {
+        --primary: #5b21b6;
+        --secondary: #7c3aed;
+        --accent: #c084fc;
+        --success: #10b981;
+        --danger: #ef4444;
+        --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #c7d2fe 100%);
+    }
 
-    <table class="table table-bordered table-striped mt-3">
-        <tr>
-            <th>Text</th>
-            <th>Image</th>
-            <th>Result</th>
-            <th>Date</th>
-        </tr>
+    body {
+        background: var(--bg-gradient);
+        min-height: 100vh;
+        margin: 0;
+    }
 
-        {% for r in records %}
-        <tr>
-            <td>{{ r.text|truncatechars:40 }}</td>
-            <td>{{ r.image }}</td>
-            <td>{{ r.result }}</td>
-            <td>{{ r.created_at }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    /* Navbar - Consistent */
+    .navbar-custom {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        padding: 1rem 0;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+
+    .navbar-brand {
+        font-size: 1.8rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .navbar-brand i {
+        margin-right: 12px;
+        font-size: 2rem;
+        vertical-align: middle;
+    }
+
+    .nav-username {
+        font-weight: 600;
+        color: var(--primary);
+        margin-right: 20px;
+    }
+
+    .btn-logout {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 10px 28px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-logout:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+    }
+
+    /* History Page */
+    .history-hero {
+        padding: 100px 20px 80px;
+        text-align: center;
+    }
+
+    .history-title {
+        font-size: 5rem;
+        font-weight: 900;
+        background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 30px;
+        line-height: 1.1;
+    }
+
+    .history-subtitle {
+        font-size: 1.8rem;
+        color: #6366f1;
+        font-weight: 500;
+        max-width: 900px;
+        margin: 0 auto 80px;
+    }
+
+    .history-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 20px 100px;
+    }
+
+    .history-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        border-radius: 40px;
+        padding: 70px 60px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .history-panel::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 10px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        border-radius: 40px 40px 0 0;
+    }
+
+    .panel-title {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #1e293b;
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .table-custom {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 20px;
+        margin-bottom: 0;
+    }
+
+    .table-custom thead th {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--primary);
+        padding: 20px;
+        text-align: center;
+        border: none;
+        background: rgba(124, 58, 237, 0.08);
+    }
+
+    .table-custom tbody tr {
+        background: white;
+        border-radius: 28px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+    }
+
+    .table-custom tbody tr:hover {
+        transform: translateY(-15px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(124, 58, 237, 0.2);
+        z-index: 5;
+    }
+
+    .table-custom tbody td {
+        padding: 30px 20px;
+        vertical-align: middle;
+        border: none;
+        font-size: 1.2rem;
+    }
+
+    .text-cell {
+        max-width: 400px;
+        color: #475569;
+        font-weight: 500;
+    }
+
+    .text-cell strong {
+        color: #1e293b;
+        display: block;
+        margin-bottom: 8px;
+        font-size: 1.1rem;
+    }
+
+    .image-cell {
+        text-align: center;
+    }
+
+    .history-image {
+        width: 180px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        transition: all 0.4s ease;
+    }
+
+    .history-image:hover {
+        transform: scale(1.1);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .result-cell {
+        text-align: center;
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    .result-real {
+        color: var(--success);
+        background: rgba(16, 185, 129, 0.15);
+        padding: 12px 32px;
+        border-radius: 50px;
+        display: inline-block;
+    }
+
+    .result-fake {
+        color: var(--danger);
+        background: rgba(239, 68, 68, 0.15);
+        padding: 12px 32px;
+        border-radius: 50px;
+        display: inline-block;
+    }
+
+    .date-cell {
+        text-align: center;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 100px 20px;
+        color: #64748b;
+        font-size: 1.8rem;
+    }
+
+    .empty-icon {
+        font-size: 8rem;
+        color: #c084fc;
+        margin-bottom: 30px;
+        opacity: 0.5;
+    }
+
+    .back-btn {
+        display: block;
+        width: fit-content;
+        margin: 80px auto 0;
+        padding: 16px 50px;
+        background: white;
+        border: 3px solid #e2e8f0;
+        color: #64748b;
+        border-radius: 50px;
+        font-size: 1.3rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.4s ease;
+    }
+
+    .back-btn:hover {
+        background: #e2e8f0;
+        color: #475569;
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+
+    @media (max-width: 1200px) {
+        .table-custom thead th, .table-custom tbody td {
+            padding: 20px 15px;
+            font-size: 1.1rem;
+        }
+        .history-image {
+            width: 150px;
+            height: 100px;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .history-title { font-size: 4rem; }
+        .history-panel { padding: 50px 40px; }
+        .panel-title { font-size: 2.6rem; }
+        .table-custom tbody tr:hover { transform: translateY(-10px) scale(1.01); }
+    }
+
+    @media (max-width: 768px) {
+        .history-title { font-size: 3.2rem; }
+        .history-subtitle { font-size: 1.5rem; }
+        .history-panel { padding: 40px 20px; }
+        .table-custom {
+            border-spacing: 0 15px;
+        }
+        .table-custom tbody td {
+            padding: 20px 10px;
+            font-size: 1rem;
+        }
+        .history-image {
+            width: 120px;
+            height: 80px;
+        }
+        .result-cell {
+            font-size: 1.2rem;
+        }
+    }
+</style>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <i class="bi bi-shield-check"></i> FakeNews AI
+        </a>
+        <div class="navbar-collapse justify-content-end">
+            <span class="nav-username">
+                <i class="bi bi-person-circle me-2"></i> {{ request.session.user }}
+            </span>
+            <a href="{% url 'logout' %}" class="btn btn-logout">
+                <i class="bi bi-box-arrow-right me-2"></i> Logout
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="history-hero">
+    <div class="container">
+        <h1 class="history-title">🕒 Prediction History</h1>
+        <p class="history-subtitle">
+            Review all your past fake news detections with images, results, and timestamps
+        </p>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="history-container">
+    <div class="history-panel">
+        <h2 class="panel-title">Your Detection Records</h2>
+
+        {% if records %}
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>News Text</th>
+                    <th>Image</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td class="text-cell">
+                        <strong>Summary:</strong>
+                        {{ r.text|truncatechars:80 }}
+                    </td>
+                    <td class="image-cell">
+                        <img src="{{ r.image.url }}" alt="News Image" class="history-image">
+                    </td>
+                    <td class="result-cell">
+                        <span class="{% if 'Real' in r.result or 'Authentic' in r.result %}result-real{% else %}result-fake{% endif %}">
+                            {{ r.result }}
+                        </span>
+                    </td>
+                    <td class="date-cell">
+                        {{ r.created_at|date:"M d, Y H:i" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No predictions yet.<br>Start detecting fake news to see your history here!</p>
+        </div>
+        {% endif %}
+
+        <a href="{% url 'home' %}" class="back-btn">
+            <i class="bi bi-arrow-left me-3"></i> Back to Dashboard
+        </a>
+    </div>
 </div>
 {% endblock %}
