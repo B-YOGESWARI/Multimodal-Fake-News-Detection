@@ -216,9 +216,4 @@ This project is developed for \*\*academic and learning purposes\*\* and demonst
 
 
 
-\### Correct Prediction Result
-
-!\[Result](screenshots/correct\_prediction.jpg)
-
-
-
+\### Correct Pr

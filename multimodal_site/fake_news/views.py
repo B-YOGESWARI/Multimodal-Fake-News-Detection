@@ -1,68 +1,66 @@
-from .models import PredictionHistory
 from django.shortcuts import render, redirect
-from .forms import RegisterForm
-from .models import RegisteredUser
-from .ml_model import predict_fake_news
 from django.conf import settings
+from .forms import RegisterForm
+from .models import RegisteredUser, PredictionHistory
+from .ml_model import predict_fake_news
 import os
+
+# =========================
+# INDEX
+# =========================
 def index(request):
-    # If user already logged in → go to home
     if request.session.get('user'):
         return redirect('home')
     return render(request, 'index.html')
+
 # =========================
 # USER REGISTRATION
 # =========================
 def register(request):
-    # 🔐 If already logged in, go to home
     if request.session.get('user'):
         return redirect('home')
 
     form = RegisterForm(request.POST or None)
-    if request.method == "POST":
-        if form.is_valid():
-            form.save()
-            return redirect('login')
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect('login')
+
     return render(request, 'register.html', {'form': form})
+
 # =========================
 # USER LOGIN
 # =========================
 def login(request):
-    # 🔐 If already logged in, go to home
     if request.session.get('user'):
         return redirect('home')
 
     error = None
 
     if request.method == "POST":
-        username = request.POST['username']
-        password = request.POST['password']
+        username = request.POST.get('username')
+        password = request.POST.get('password')
 
         user = RegisteredUser.objects.filter(
             username=username,
-            password=password
+            password=password,
+            is_active=True
         ).first()
 
         if user:
-            if user.is_active:
-                request.session['user'] = user.username
-                return redirect('home')
-            else:
-                error = "Your account is not activated by admin"
+            request.session['user'] = user.username
+            return redirect('home')
         else:
-            error = "Invalid username or password"
+            error = "Invalid credentials or account not activated"
 
     return render(request, 'login.html', {'error': error})
 
 # =========================
-# USER HOME PAGE
+# USER HOME
 # =========================
 def home(request):
     if not request.session.get('user'):
         return redirect('login')
-
     return render(request, 'home.html')
-
 
 # =========================
 # TRAINING PAGE
@@ -70,9 +68,7 @@ def home(request):
 def training(request):
     if not request.session.get('user'):
         return redirect('login')
-
     return render(request, 'training.html')
-
 
 # =========================
 # PREDICTION PAGE
@@ -93,12 +89,10 @@ def predict(request):
             for chunk in image.chunks():
                 f.write(chunk)
 
-        # 🔮 Prediction
         result = predict_fake_news(text, image_path)
 
-        # ✅ SAVE HISTORY (THIS WAS MISSING)
         PredictionHistory.objects.create(
-            username=request.session.get('user'),
+            username=request.session['user'],
             text=text,
             image=image.name,
             result=result
@@ -106,14 +100,16 @@ def predict(request):
 
     return render(request, 'predict.html', {'result': result})
 
+# =========================
+# HISTORY
+# =========================
 def history(request):
     if not request.session.get('user'):
         return redirect('login')
 
     records = PredictionHistory.objects.filter(
-        username=request.session.get('user')
+        username=request.session['user']
     )
-
     return render(request, 'history.html', {'records': records})
 
 # =========================
@@ -123,7 +119,6 @@ def logout(request):
     request.session.flush()
     return redirect('login')
 
-
 # =========================
 # ADMIN LOGIN
 # =========================
@@ -131,17 +126,13 @@ def admin_login(request):
     error = None
 
     if request.method == "POST":
-        username = request.POST['username']
-        password = request.POST['password']
-
-        if username == "admin" and password == "admin123":
+        if request.POST['username'] == "admin" and request.POST['password'] == "admin123":
             request.session['admin'] = True
             return redirect('admin_dashboard')
         else:
             error = "Invalid admin credentials"
 
     return render(request, 'admin_login.html', {'error': error})
-
 
 # =========================
 # ADMIN DASHBOARD
@@ -153,7 +144,6 @@ def admin_dashboard(request):
     users = RegisteredUser.objects.all()
     return render(request, 'admin_dashboard.html', {'users': users})
 
-
 # =========================
 # ACTIVATE / DEACTIVATE USER
 # =========================
@@ -164,46 +154,8 @@ def toggle_user_status(request, user_id):
     user = RegisteredUser.objects.get(id=user_id)
     user.is_active = not user.is_active
     user.save()
-
     return redirect('admin_dashboard')
-def admin_logout(request):
-    request.session.flush()
-    return redirect('admin_login')
-def training(request):
-    if not request.session.get('user'):
-        return redirect('login')
 
-    return render(request, 'training.html')
-def index(request):
-    request.session.flush()  # 🔥 FORCE clear session
-    return render(request, 'index.html')
-def login(request):
-    error = None
-
-    if request.method == "POST":
-        username = request.POST['username']
-        password = request.POST['password']
-
-        user = RegisteredUser.objects.filter(
-            username=username,
-            password=password,
-            is_active=True
-        ).first()
-
-        if user:
-            request.session['user'] = user.username
-            return redirect('home')
-        else:
-            error = "Invalid credentials or user not activated"
-
-    return render(request, 'login.html', {'error': error})
-def training(request):
-    if not request.session.get('user'):
-        return redirect('login')
-    return render(request, 'training.html')
-def admin_logout(request):
-    request.session.flush()
-    return redirect('admin_login')
 # =========================
 # ADMIN LOGOUT
 # =========================

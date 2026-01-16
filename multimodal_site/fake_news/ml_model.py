@@ -36,5 +36,5 @@ def predict_fake_news(text, image_path):
 
     # ---- SIMILARITY ----
     score = cosine_similarity(text_emb.numpy(), img_emb.numpy())[0][0]
-
-    return "REAL NEWS" if score >= 0.25 else "FAKE NEWS"
+    THRESHOLD = 0.25 # adjustable value
+    return "REAL NEWS" if THRESHOLD >= 0.25 else "FAKE NEWS"
